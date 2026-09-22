@@ -395,3 +395,28 @@ def resolver_binario(m, limite=22, top=6):
     res.n_factibles = len(factibles)
     res.n_total = 1 << n
     return res
+
+
+def planes_alternos(m, tol=F(1, 10 ** 7)):
+    """Si hay variables no básicas con costo reducido 0, calcula un plan óptimo alterno por cada una
+    (mismo Z*, distinta asignación), sesgando levemente su costo para forzarla a entrar en la base."""
+    r = resolver(m)
+    if r.estado != "optimo":
+        return []
+    candidatas = [j for j in range(len(m.vars)) if m.vars[j] not in r.base_final and r.costos_reducidos[j] == 0]
+    vistos = {tuple(r.x)}
+    planes = []
+    for j in candidatas:
+        sesgo = -tol if m.sentido == "min" else tol
+        m2 = m.variar(c={m.vars[j]: m.c[j] + sesgo})
+        r2 = resolver(m2)
+        if r2.estado != "optimo":
+            continue
+        x2 = tuple(r2.x)
+        if x2 in vistos:
+            continue
+        z_real = sum(c * x for c, x in zip(m.c, r2.x))
+        if z_real == r.z:
+            vistos.add(x2)
+            planes.append((m.vars[j], list(r2.x), z_real))
+    return planes

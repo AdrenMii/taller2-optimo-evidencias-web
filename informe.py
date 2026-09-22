@@ -6,7 +6,7 @@ from fractions import Fraction as F
 from html import escape
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from motor import resolver, verificar_scipy, umbral_factibilidad, ffrac, resolver_binario
+from motor import resolver, verificar_scipy, umbral_factibilidad, ffrac, resolver_binario, planes_alternos
 from modelos import MODELOS, CONFIG, REFERENCIAS, INTEGRANTES, FUENTE_PDF, FUENTE_DOCX
 import graficos as G
 
@@ -275,9 +275,18 @@ def bloque_alternos(A):
     alt = [m.vars[j] for j in range(len(m.vars)) if m.vars[j] not in r.base_final and r.costos_reducidos[j] == 0]
     if not alt:
         return ""
-    return ("<p class='muted'><b>Óptimos alternativos.</b> " + ", ".join(sub(a) for a in alt) +
-            f" tiene costo reducido 0 fuera de la base: existen otros planes con el mismo valor óptimo ({g(r.z)}). "
-            "El de la tabla final es uno de ellos; cualquier plan factible con ese valor también es óptimo.</p>")
+    txt = ("<p class='muted'><b>Óptimos alternativos.</b> " + ", ".join(sub(a) for a in alt) +
+           f" tiene costo reducido 0 fuera de la base: existen otros planes con el mismo valor óptimo ({g(r.z)}). "
+           "El de la tabla final es uno de ellos; cualquier plan factible con ese valor también es óptimo.</p>")
+    planes = planes_alternos(m)
+    if not planes:
+        return txt
+    filas = [[sub(v), ", ".join(f"{sub(vv)} = {g(x)}" for vv, x in zip(m.vars, xs)), g(z)] for v, xs, z in planes]
+    t = tabla(["Variable que entra", "Plan alterno", "Valor (igual al óptimo)"], filas,
+              "Otros planes óptimos calculados (mismo valor, distinta asignación)",
+              nota="Cada uno se obtuvo forzando a entrar a la variable indicada (sesgo infinitesimal en su coeficiente) y resolviendo de nuevo; "
+                   "se conservan solo los que dan exactamente el mismo valor óptimo con el modelo original.")
+    return txt + t
 
 
 def bloque_entero(A):
